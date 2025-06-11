@@ -2,21 +2,12 @@
 <html>
 <head>
   <title>Slots!</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #111; color: white; }
-    .slots { font-size: 5rem; margin: 1rem 0; }
-    .button { font-size: 1.2rem; padding: 10px 20px; margin: 10px; }
-    input { font-size: 1.2rem; padding: 5px; width: 60px; text-align: center; }
-    .flash { animation: flash 0.3s ease-in-out; }
-    @keyframes flash {
-      from { opacity: 0.5; transform: scale(1.2); }
-      to { opacity: 1; transform: scale(1); }
-    }
-  </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>🎰 Slot Machine</h1>
-  <div class="slots" id="slots">❔❔❔</div>
+  <div id="reels"></div>
+
   <div>
     <label>Bet: $</label>
     <input id="bet" type="number" value="10" min="1">
@@ -25,26 +16,66 @@
   <h3 id="message">Balance: ${{ balance }}</h3>
 
   <script>
-    function spin() {
-      const bet = document.getElementById('bet').value;
-      fetch('/spin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `bet=${bet}`
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          document.getElementById('message').innerText = data.error;
-        } else {
-          const s = document.getElementById('slots');
-          s.innerText = data.result.join('');
-          s.classList.add('flash');
-          setTimeout(() => s.classList.remove('flash'), 300);
-          document.getElementById('message').innerText = `You won $${data.payout}! Balance: $${data.balance}`;
+  const SYMBOLS = ['🍒', '💎', '7️⃣', '🍋', '🔔'];
+
+  function spin() {
+    const bet = document.getElementById('bet').value;
+    fetch('/spin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `bet=${bet}`
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        document.getElementById('message').innerText = data.error;
+        return;
+      }
+
+      const reels = document.getElementById('reels');
+      reels.innerHTML = ''; // Clear previous
+
+      const stopSymbols = data.result;
+
+      stopSymbols.forEach((symbol, i) => {
+        const reel = document.createElement('div');
+        reel.classList.add('reel');
+
+        const inner = document.createElement('div');
+        inner.classList.add('reel-inner');
+
+        // Fill reel with random symbols
+        for (let j = 0; j < 30; j++) {
+          const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          const div = document.createElement('div');
+          div.classList.add('symbol');
+          div.innerText = sym;
+          inner.appendChild(div);
         }
+
+        // Add the final symbol at the end
+        const final = document.createElement('div');
+        final.classList.add('symbol');
+        final.innerText = symbol;
+        inner.appendChild(final);
+
+        reel.appendChild(inner);
+        reels.appendChild(reel);
+
+        // Animate reel
+        setTimeout(() => {
+          const offset = -((inner.childElementCount - 1) * 80);
+          inner.style.transform = `translateY(${offset}px)`;
+        }, i * 300); // staggered delay
       });
-    }
-  </script>
+
+      // Update balance message after reels finish
+      setTimeout(() => {
+        document.getElementById('message').innerText = `You won $${data.payout}! Balance: $${data.balance}`;
+      }, stopSymbols.length * 300 + 800);
+    });
+  }
+</script>
+
 </body>
 </html>
