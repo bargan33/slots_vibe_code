@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Slots!</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #111; color: white; }
+    .slots { font-size: 5rem; margin: 1rem 0; }
+    .button { font-size: 1.2rem; padding: 10px 20px; margin: 10px; }
+    input { font-size: 1.2rem; padding: 5px; width: 60px; text-align: center; }
+    .flash { animation: flash 0.3s ease-in-out; }
+    @keyframes flash {
+      from { opacity: 0.5; transform: scale(1.2); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🎰 Slot Machine</h1>
+  <div class="slots" id="slots">❔❔❔</div>
+  <div>
+    <label>Bet: $</label>
+    <input id="bet" type="number" value="10" min="1">
+  </div>
+  <button class="button" onclick="spin()">SPIN</button>
+  <h3 id="message">Balance: ${{ balance }}</h3>
+
+  <script>
+    function spin() {
+      const bet = document.getElementById('bet').value;
+      fetch('/spin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `bet=${bet}`
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('message').innerText = data.error;
+        } else {
+          const s = document.getElementById('slots');
+          s.innerText = data.result.join('');
+          s.classList.add('flash');
+          setTimeout(() => s.classList.remove('flash'), 300);
+          document.getElementById('message').innerText = `You won $${data.payout}! Balance: $${data.balance}`;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
