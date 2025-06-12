@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Slot Machine</h2>
+
+  <div id="reels" style="min-height: 80px; display: flex; justify-content: center; gap: 20px;">
+    <div class="reel"><div class="symbol">❔</div></div>
+    <div class="reel"><div class="symbol">❔</div></div>
+    <div class="reel"><div class="symbol">❔</div></div>
+  </div>
+
+  <div>
+    <label>Bet: $</label>
+    <input id="bet" type="number" value="10" min="1">
+  </div>
+
+  <button class="button" onclick="spin()">SPIN</button>
+
+  <h3 id="message">Balance: ${{ user[2] }}</h3>
+
+  <canvas id="confetti-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:-1; opacity:0; transition: opacity 0.5s ease;"></canvas>
+  <div id="flash" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; opacity:0; transition: opacity 0.3s ease; z-index:-2; pointer-events:none;"></div>
+
+  <script type="module">
+    import { launchConfetti, screenFlash } from '/static/confetti.js';
+    import { spin } from '/static/slot.js';
+
+    // Expose spin to button click
+    window.spin = spin;
+  </script>
+{% endblock %}
