@@ -1,161 +1,30 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Slots!</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+{% extends 'base.html' %}
 
-<body>
-  <h1>🎰 Slot Machine</h1>
+{% block content %}
+  <h2>Welcome to the Online Casino!</h2>
 
-  <div id="reels"></div>
+  {% if user %}
+    <p>You are logged in as <strong>{{ user[1] }}</strong> with <strong>${{ user[2] }}</strong>.</p>
+  {% else %}
+    <p>Please log in or register to start playing.</p>
+  {% endif %}
 
-  <div>
-    <label>Bet: $</label>
-    <input id="bet" type="number" value="10" min="1">
-  </div>
+  <h3>Leaderboard</h3>
+  <table style="margin: auto;">
+    <tr><th>Username</th><th>Balance</th></tr>
+    {% for name, balance in leaderboard %}
+      <tr><td>{{ name }}</td><td>${{ balance }}</td></tr>
+    {% endfor %}
+  </table>
 
-  <button class="button" onclick="spin()">SPIN</button>
+<form method="POST" action="{{ url_for('topup.topup') }}" style="margin-top: 20px;">
+  <label>Top up balance by: $</label>
+  <input type="number" name="amount" min="1" value="20">
+  <button type="submit" class="button">Top Up</button>
+</form>
 
-  <h3 id="message">Balance: ${{ balance }}</h3>
-<canvas id="confetti-canvas" style="
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:-1;
-  opacity:0;
-  transition: opacity 0.5s ease;
-"></canvas>
-
-
-
-
-  <!-- Flash overlay -->
-<div id="flash" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; opacity:0; transition: opacity 0.3s ease; z-index:-2; pointer-events:none;"></div>
-
-<script>
-  // Confetti logic
-  function launchConfetti() {
-    const canvas = document.getElementById('confetti-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    canvas.style.opacity = 1;
-
-    const pieces = Array.from({ length: 100 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * -canvas.height,
-      r: Math.random() * 6 + 4,
-      d: Math.random() * 10 + 2,
-      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-      tilt: Math.random() * 10 - 5
-    }));
-
-    let frame = 0;
-    let animationFrame;
-    let running = true;
-
-    function draw() {
-      if (!running) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let p of pieces) {
-        ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.ellipse(p.x + p.tilt, p.y, p.r, p.r * 0.4, 0, 0, 2 * Math.PI);
-        ctx.fill();
-        p.y += p.d;
-        p.tilt += Math.random() - 0.5;
-      }
-      frame++;
-      if (frame < 150) {
-        animationFrame = requestAnimationFrame(draw);
-      }
-    }
-
-    draw();
-
-    // Fade out after 2 seconds and stop animation
-    setTimeout(() => {
-      canvas.style.opacity = 0;
-      running = false;
-      cancelAnimationFrame(animationFrame);
-      setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 500);
-    }, 2000);
-  }
-
-  function screenFlash() {
-    const flash = document.getElementById('flash');
-    flash.style.opacity = 1;
-    setTimeout(() => {
-      flash.style.opacity = 0;
-    }, 150);
-  }
-
-  const SYMBOLS = ['🍒', '💎', '7️⃣', '🍋', '🔔'];
-
-  function spin() {
-    const bet = document.getElementById('bet').value;
-    fetch('/spin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `bet=${bet}`
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        document.getElementById('message').innerText = data.error;
-        return;
-      }
-
-      const reels = document.getElementById('reels');
-      reels.innerHTML = '';
-
-      const stopSymbols = data.result;
-
-      stopSymbols.forEach((symbol, i) => {
-        const reel = document.createElement('div');
-        reel.classList.add('reel');
-
-        const inner = document.createElement('div');
-        inner.classList.add('reel-inner');
-
-        for (let j = 0; j < 30; j++) {
-          const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-          const div = document.createElement('div');
-          div.classList.add('symbol');
-          div.innerText = sym;
-          inner.appendChild(div);
-        }
-
-        const final = document.createElement('div');
-        final.classList.add('symbol');
-        final.innerText = symbol;
-        inner.appendChild(final);
-
-        reel.appendChild(inner);
-        reels.appendChild(reel);
-
-        setTimeout(() => {
-          const offset = -((inner.childElementCount - 1) * 80);
-          inner.style.transform = `translateY(${offset}px)`;
-        }, i * 300);
-      });
-
-      setTimeout(() => {
-        document.getElementById('message').innerText = `You won $${data.payout}! Balance: $${data.balance}`;
-
-        if (data.payout >= 10 * parseInt(bet)) {
-          screenFlash();
-          launchConfetti();
-        }
-      }, stopSymbols.length * 300 + 800);
-    });
-  }
-</script>
-
-</body>
-</html>
+  {% if user %}
+    <h3>Games</h3>
+    <a href="{{ url_for('slots.play') }}" class="button">Play Slots 🎰</a>
+  {% endif %}
+{% endblock %}

@@ -1,43 +1,31 @@
-from flask import Flask, render_template, request, jsonify, session
-import random
+from flask import Flask, render_template, session
 from flask_session import Session
+import os
+
+from auth import auth_bp
+from db import init_db, get_leaderboard, get_user_by_id
+from games.slots import slots_bp
+from routes.topup import topup_bp  # ✅ Import the new blueprint
 
 app = Flask(__name__)
-app.secret_key = 'slot-secret'
+app.secret_key = 'super-secret-key'
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-SYMBOLS = ['🍒', '💎', '7️⃣', '🍋', '🔔']
-PAYOUTS = {
-    ('🍒', '🍒', '🍒'): 5,
-    ('💎', '💎', '💎'): 10,
-    ('7️⃣', '7️⃣', '7️⃣'): 20,
-    ('🍋', '🍋', '🍋'): 4,
-    ('🔔', '🔔', '🔔'): 7
-}
+# Init DB if not yet present
+if not os.path.exists('casino.db'):
+    init_db()
+
+# Register blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(slots_bp)
+app.register_blueprint(topup_bp)  # ✅ Register the topup blueprint
 
 @app.route('/')
-def index():
-    if 'balance' not in session:
-        session['balance'] = 100
-    return render_template('index.html', balance=session['balance'])
-
-@app.route('/spin', methods=['POST'])
-def spin():
-    bet = int(request.form['bet'])
-    if session['balance'] < bet or bet <= 0:
-        return jsonify({"error": "Invalid bet."})
-
-    session['balance'] -= bet
-    result = tuple(random.choice(SYMBOLS) for _ in range(3))
-    payout = PAYOUTS.get(result, 0) * bet
-    session['balance'] += payout
-
-    return jsonify({
-        "result": result,
-        "payout": payout,
-        "balance": session['balance']
-    })
+def home():
+    user = get_user_by_id(session['user_id']) if 'user_id' in session else None
+    leaderboard = get_leaderboard()
+    return render_template('index.html', user=user, leaderboard=leaderboard)
 
 if __name__ == '__main__':
     app.run(debug=True)
