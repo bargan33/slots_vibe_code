@@ -2,20 +2,99 @@
 <html>
 <head>
   <title>Slots!</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
   <h1>🎰 Slot Machine</h1>
+
   <div id="reels"></div>
 
   <div>
     <label>Bet: $</label>
     <input id="bet" type="number" value="10" min="1">
   </div>
-  <button class="button" onclick="spin()">SPIN</button>
-  <h3 id="message">Balance: ${{ balance }}</h3>
 
-  <script>
+  <button class="button" onclick="spin()">SPIN</button>
+
+  <h3 id="message">Balance: ${{ balance }}</h3>
+<canvas id="confetti-canvas" style="
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:-1;
+  opacity:0;
+  transition: opacity 0.5s ease;
+"></canvas>
+
+
+
+
+  <!-- Flash overlay -->
+<div id="flash" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; opacity:0; transition: opacity 0.3s ease; z-index:-2; pointer-events:none;"></div>
+
+<script>
+  // Confetti logic
+  function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.opacity = 1;
+
+    const pieces = Array.from({ length: 100 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * -canvas.height,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 10 + 2,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      tilt: Math.random() * 10 - 5
+    }));
+
+    let frame = 0;
+    let animationFrame;
+    let running = true;
+
+    function draw() {
+      if (!running) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let p of pieces) {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.ellipse(p.x + p.tilt, p.y, p.r, p.r * 0.4, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        p.y += p.d;
+        p.tilt += Math.random() - 0.5;
+      }
+      frame++;
+      if (frame < 150) {
+        animationFrame = requestAnimationFrame(draw);
+      }
+    }
+
+    draw();
+
+    // Fade out after 2 seconds and stop animation
+    setTimeout(() => {
+      canvas.style.opacity = 0;
+      running = false;
+      cancelAnimationFrame(animationFrame);
+      setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 500);
+    }, 2000);
+  }
+
+  function screenFlash() {
+    const flash = document.getElementById('flash');
+    flash.style.opacity = 1;
+    setTimeout(() => {
+      flash.style.opacity = 0;
+    }, 150);
+  }
+
   const SYMBOLS = ['🍒', '💎', '7️⃣', '🍋', '🔔'];
 
   function spin() {
@@ -33,7 +112,7 @@
       }
 
       const reels = document.getElementById('reels');
-      reels.innerHTML = ''; // Clear previous
+      reels.innerHTML = '';
 
       const stopSymbols = data.result;
 
@@ -44,7 +123,6 @@
         const inner = document.createElement('div');
         inner.classList.add('reel-inner');
 
-        // Fill reel with random symbols
         for (let j = 0; j < 30; j++) {
           const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
           const div = document.createElement('div');
@@ -53,7 +131,6 @@
           inner.appendChild(div);
         }
 
-        // Add the final symbol at the end
         const final = document.createElement('div');
         final.classList.add('symbol');
         final.innerText = symbol;
@@ -62,16 +139,19 @@
         reel.appendChild(inner);
         reels.appendChild(reel);
 
-        // Animate reel
         setTimeout(() => {
           const offset = -((inner.childElementCount - 1) * 80);
           inner.style.transform = `translateY(${offset}px)`;
-        }, i * 300); // staggered delay
+        }, i * 300);
       });
 
-      // Update balance message after reels finish
       setTimeout(() => {
         document.getElementById('message').innerText = `You won $${data.payout}! Balance: $${data.balance}`;
+
+        if (data.payout >= 10 * parseInt(bet)) {
+          screenFlash();
+          launchConfetti();
+        }
       }, stopSymbols.length * 300 + 800);
     });
   }
